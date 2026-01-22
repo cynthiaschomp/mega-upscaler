@@ -15,6 +15,7 @@ Transform any image into massive, print-ready files up to **6+ gigapixels** usin
 - **Web Interface** - Drag-and-drop UI with real-time progress
 - **Job Persistence** - Redis-backed job queue survives restarts
 - **TIFF Output** - Professional print-ready files with LZW compression
+- **No API Keys** - Fully self-hosted, no cloud dependencies
 
 ---
 
@@ -30,20 +31,56 @@ Transform any image into massive, print-ready files up to **6+ gigapixels** usin
 
 ---
 
-## 🚀 Quick Install
+## 🐳 Docker Installation
 
-### Option 1: Web Installer (Recommended)
+### Don't have Docker? No problem!
 
-1. Upload the package to your server
-2. Navigate to `http://your-server/mega-upscaler/install.php`
-3. Follow the wizard
-
-### Option 2: Manual Install
+Run the included auto-installer:
 
 ```bash
-# Extract package
-unzip mega-upscaler-v3.2.zip
-cd mega-upscaler-v3.2
+chmod +x install-docker.sh
+sudo ./install-docker.sh
+```
+
+**Supported operating systems:**
+
+| OS Family | Distributions |
+|-----------|---------------|
+| Debian-based | Ubuntu, Debian, Linux Mint, Pop!_OS |
+| RHEL-based | CentOS, RHEL, Fedora, Rocky Linux, AlmaLinux |
+| macOS | Via Homebrew (Docker Desktop) |
+
+**What the script does:**
+1. Detects your operating system
+2. Adds Docker's official repository
+3. Installs Docker Engine and Docker Compose
+4. Starts the Docker service
+5. Adds your user to the docker group
+
+> **Note:** After installation, log out and back in for group changes to take effect.
+
+---
+
+## 🚀 Quick Install
+
+### Option 1: Web Installer (Recommended for beginners)
+
+1. Upload the package to your web server
+2. Navigate to `http://your-server/mega-upscaler/install.php`
+3. Follow the 6-step wizard:
+   - **Welcome** - Introduction
+   - **System Check** - Auto-detects Docker, RAM, GPU
+   - **Redis Setup** - Choose bundled, external, or fresh install
+   - **Configuration** - Set port and install directory
+   - **Install** - One-click Docker build
+   - **Complete** - Launch your app!
+
+### Option 2: Manual Install (for developers)
+
+```bash
+# Clone the repository
+git clone https://github.com/cynthiaschomp/mega-upscaler.git
+cd mega-upscaler
 
 # Build and run
 docker compose build
@@ -54,20 +91,79 @@ docker compose up -d
 
 ---
 
-## ⚙️ Configuration
+## 🗄️ Redis Configuration
 
-### Environment Variables
+Redis persists job state so your queue survives container restarts.
+
+### Option A: Bundled Redis (Default - Recommended)
+
+The installer creates a dedicated Redis container automatically. Zero configuration needed.
+
+```yaml
+# Included in docker-compose.yml
+services:
+  mega-upscaler-redis:
+    image: redis:alpine
+    volumes:
+      - ./redis-data:/data
+```
+
+### Option B: Use External Redis
+
+If you already have Redis running, set these environment variables:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `REDIS_HOST` | `mega-upscaler-redis` | Redis server hostname |
-| `REDIS_PORT` | `6379` | Redis server port |
+| `REDIS_HOST` | `mega-upscaler-redis` | Redis hostname or IP |
+| `REDIS_PORT` | `6379` | Redis port |
+
+**Example:**
+```bash
+docker run -d \
+  -e REDIS_HOST=192.168.1.100 \
+  -e REDIS_PORT=6379 \
+  -p 15073:15073 \
+  mega-upscaler
+```
+
+### Option C: Install Redis on Host
+
+The web installer wizard can install Redis directly on your host system if you prefer not to use Docker for Redis.
+
+### Redis Data Persistence
+
+Job data is stored in `./redis-data/` and persists across restarts. To clear all jobs:
+
+```bash
+docker compose exec mega-upscaler-redis redis-cli FLUSHALL
+```
+
+---
+
+## ⚙️ Configuration
 
 ### Target Dimensions
 
 Default output: **39ft × 12ft @ 300 PPI** (140,400 × 43,200 pixels)
 
-These can be adjusted in the web interface for each job.
+Adjustable per-job in the web interface:
+- Width/Height (feet or pixels)
+- PPI (72-600)
+- Scale factor (2x, 4x, 8x, 16x)
+
+### GPU Acceleration
+
+GPU is auto-detected if you have:
+1. NVIDIA GPU with 4GB+ VRAM
+2. NVIDIA drivers installed
+3. NVIDIA Container Toolkit
+
+**Verify GPU access:**
+```bash
+docker run --rm --gpus all nvidia/cuda:11.0-base nvidia-smi
+```
+
+CPU-only mode works but is significantly slower.
 
 ---
 
@@ -76,18 +172,19 @@ These can be adjusted in the web interface for each job.
 ```
 mega-upscaler/
 ├── app/
-│   └── main.py           # Main application
+│   └── main.py           # FastAPI backend
 ├── web/
 │   └── index.html        # Web interface
-├── uploads/              # Input images
-├── outputs/              # Processed TIFF files
-├── thumbnails/           # Job previews
+├── uploads/              # Input images (auto-created)
+├── outputs/              # Processed TIFF files (auto-created)
+├── thumbnails/           # Job previews (auto-created)
 ├── weights/              # AI model weights (auto-downloaded)
-├── redis-data/           # Redis persistence
+├── redis-data/           # Redis persistence (auto-created)
 ├── docker-compose.yml    # Docker configuration
 ├── Dockerfile            # Build instructions
 ├── requirements.txt      # Python dependencies
-└── install.php           # Web installer
+├── install.php           # Web installer wizard
+└── install-docker.sh     # Docker auto-installer
 ```
 
 ---
@@ -100,17 +197,34 @@ docker compose logs mega-upscaler
 ```
 
 ### Out of memory
-- Reduce tile size in configuration
-- Ensure swap space is enabled
-- Process smaller images first
+```bash
+# Add swap space
+sudo fallocate -l 8G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+```
 
 ### GPU not detected
 ```bash
-# Check NVIDIA driver
-nvidia-smi
+# Install NVIDIA Container Toolkit (Ubuntu/Debian)
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+  sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+  sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
+sudo systemctl restart docker
+```
 
-# Check Docker GPU access
-docker run --rm --gpus all nvidia/cuda:11.0-base nvidia-smi
+### Redis connection failed
+```bash
+# Check Redis container
+docker ps | grep redis
+docker compose logs mega-upscaler-redis
+
+# Test connection
+docker exec mega-upscaler-redis redis-cli ping
+# Should return: PONG
 ```
 
 ---
@@ -119,9 +233,9 @@ docker run --rm --gpus all nvidia/cuda:11.0-base nvidia-smi
 
 ```bash
 cd mega-upscaler
-docker compose down -v
+docker compose down -v    # Stop and remove volumes
 cd ..
-rm -rf mega-upscaler
+rm -rf mega-upscaler      # Remove files
 ```
 
 ---
@@ -134,25 +248,11 @@ MIT License - Free for personal and commercial use.
 
 ## 🙏 Credits
 
-- **Real-ESRGAN** - AI upscaling model by Xintao Wang
-- **FastAPI** - Web framework
-- **Pillow** - Image processing
+- **[Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN)** - AI upscaling by Xintao Wang
+- **[FastAPI](https://fastapi.tiangolo.com/)** - Python web framework
+- **[Pillow](https://pillow.readthedocs.io/)** - Image processing
+- **[Redis](https://redis.io/)** - Job persistence
 
 ---
 
-Made with 💜 by Schomp Technologies
-
----
-
-## 🐳 Docker Auto-Installation
-
-If Docker is not installed, run:
-
-🔍 Detected OS: 
-
-This auto-detects your OS and installs Docker:
-- ✅ Ubuntu / Debian / Linux Mint
-- ✅ CentOS / RHEL / Fedora / Rocky / AlmaLinux  
-- ✅ macOS (via Homebrew)
-
-After installation, run the web installer at 
+Made with 💜 by [Schomp Technologies](https://schomp.ai)
