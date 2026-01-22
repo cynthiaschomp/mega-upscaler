@@ -141,3 +141,18 @@ MIT License - Free for personal and commercial use.
 ---
 
 Made with 💜 by Schomp Technologies
+
+---
+
+## 🐳 Docker Auto-Installation
+
+If Docker is not installed, run:
+
+🔍 Detected OS: 
+
+This auto-detects your OS and installs Docker:
+- ✅ Ubuntu / Debian / Linux Mint
+- ✅ CentOS / RHEL / Fedora / Rocky / AlmaLinux  
+- ✅ macOS (via Homebrew)
+
+After installation, run the web installer at 
