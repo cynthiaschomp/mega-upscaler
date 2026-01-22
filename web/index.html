@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MEGA UPSCALER v3.1 - AI Image Scaling</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0a0015 0%, #1a0030 25%, #0d001a 50%, #150025 75%, #0a0015 100%);
+            font-family: 'Rajdhani', sans-serif;
+            color: #fff;
+            overflow-x: hidden;
+        }
+        
+        .grid-bg {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: 
+                linear-gradient(rgba(255,0,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,0,255,0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        .glow-orb {
+            position: fixed;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .glow-orb.pink {
+            top: 10%; left: 10%;
+            width: 400px; height: 400px;
+            background: radial-gradient(circle, rgba(255,0,255,0.15) 0%, transparent 70%);
+        }
+        .glow-orb.cyan {
+            bottom: 10%; right: 10%;
+            width: 500px; height: 500px;
+            background: radial-gradient(circle, rgba(0,255,255,0.1) 0%, transparent 70%);
+        }
+        
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(1.8rem, 4vw, 3rem);
+            font-weight: 900;
+            background: linear-gradient(90deg, #f0f, #0ff, #f0f);
+            background-size: 200% 100%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shimmer 3s linear infinite;
+            letter-spacing: 0.1em;
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .subtitle {
+            color: #0ff;
+            font-size: 1rem;
+            margin-top: 8px;
+            text-shadow: 0 0 10px rgba(0,255,255,0.5);
+            letter-spacing: 0.2em;
+        }
+        
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            justify-content: center;
+        }
+        
+        .tab-btn {
+            padding: 12px 30px;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,0,255,0.3);
+            border-radius: 10px;
+            color: #888;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.9rem;
+            letter-spacing: 0.1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .tab-btn:hover { border-color: #0ff; color: #0ff; }
+        
+        .tab-btn.active {
+            background: linear-gradient(135deg, rgba(255,0,255,0.2), rgba(0,255,255,0.2));
+            border-color: #f0f;
+            color: #fff;
+            box-shadow: 0 0 20px rgba(255,0,255,0.3);
+        }
+        
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        /* Specs Bar */
+        .specs-bar {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .spec-chip {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,0,255,0.3);
+            border-radius: 20px;
+            padding: 8px 20px;
+            font-size: 0.85rem;
+        }
+        
+        .spec-chip .label { color: #888; }
+        .spec-chip .value { color: #f0f; font-weight: bold; margin-left: 5px; }
+        
+        /* Upload Zone */
+        .upload-zone {
+            border: 2px dashed rgba(255,0,255,0.5);
+            border-radius: 20px;
+            padding: 50px 30px;
+            text-align: center;
+            cursor: pointer;
+            background: rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+            margin-bottom: 25px;
+        }
+        
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: #0ff;
+            background: rgba(0,255,255,0.05);
+            box-shadow: 0 0 30px rgba(0,255,255,0.3);
+        }
+        
+        .upload-icon { font-size: 3rem; margin-bottom: 15px; }
+        .upload-text { font-size: 1.2rem; color: #f0f; }
+        .upload-hint { color: #666; margin-top: 8px; font-size: 0.9rem; }
+        
+        #file-input { display: none; }
+        
+        /* Analysis Panel */
+        .panel {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(0,255,255,0.3);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            backdrop-filter: blur(10px);
+            display: none;
+        }
+        .panel.active { display: block; }
+        
+        .panel-grid {
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            gap: 25px;
+            align-items: start;
+        }
+        
+        @media (max-width: 768px) {
+            .panel-grid { grid-template-columns: 1fr; }
+        }
+        
+        .preview-img {
+            width: 100%;
+            border-radius: 10px;
+            border: 2px solid rgba(255,0,255,0.3);
+        }
+        
+        .preview-name {
+            text-align: center;
+            color: #888;
+            margin-top: 8px;
+            font-size: 0.8rem;
+            word-break: break-all;
+        }
+        
+        .analysis-title {
+            color: #0ff;
+            margin: 0 0 15px 0;
+            font-size: 1.1rem;
+            letter-spacing: 0.1em;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+        }
+        
+        .stat-box {
+            padding: 12px;
+            border-radius: 8px;
+        }
+        .stat-box.pink { background: rgba(255,0,255,0.1); }
+        .stat-box.cyan { background: rgba(0,255,255,0.1); }
+        .stat-box.dark { background: rgba(255,255,255,0.05); }
+        
+        .stat-label { color: #888; font-size: 0.7rem; }
+        .stat-value { font-size: 1rem; font-weight: bold; }
+        .stat-box.pink .stat-value { color: #f0f; }
+        .stat-box.cyan .stat-value { color: #0ff; }
+        .stat-box.dark .stat-value { color: #fff; }
+        
+        /* Config */
+        .config-section {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .config-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .config-field {
+            flex: 1;
+            min-width: 100px;
+        }
+        
+        .config-field label {
+            display: block;
+            color: #888;
+            font-size: 0.7rem;
+            margin-bottom: 5px;
+        }
+        
+        .config-field input {
+            width: 100%;
+            padding: 10px;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,0,255,0.3);
+            border-radius: 5px;
+            color: #fff;
+            font-family: inherit;
+            font-size: 1rem;
+        }
+        
+        .config-field input:focus {
+            outline: none;
+            border-color: #0ff;
+        }
+        
+        /* Buttons */
+        .btn {
+            padding: 15px 30px;
+            font-size: 1rem;
+            font-weight: bold;
+            font-family: 'Orbitron', sans-serif;
+            letter-spacing: 0.1em;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(90deg, #f0f, #0ff);
+            color: #000;
+            box-shadow: 0 0 25px rgba(255,0,255,0.5);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 40px rgba(255,0,255,0.7);
+        }
+        
+        .btn-primary:disabled {
+            background: rgba(100,100,100,0.5);
+            color: #888;
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        /* ============================================
+           ENHANCED PROGRESS PANEL
+           ============================================ */
+        .progress-panel {
+            margin-top: 20px;
+            display: none;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(0,255,255,0.3);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        
+        .progress-panel.active { display: block; }
+        
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+        
+        .progress-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .progress-percent {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #0ff;
+            font-family: 'Orbitron', sans-serif;
+            line-height: 1;
+        }
+        
+        .progress-stage-info {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+        
+        .progress-stage {
+            color: #f0f;
+            font-size: 1rem;
+            font-weight: bold;
+        }
+        
+        .progress-detail {
+            color: #888;
+            font-size: 0.85rem;
+        }
+        
+        .progress-right {
+            text-align: right;
+        }
+        
+        .progress-time-row {
+            display: flex;
+            gap: 20px;
+            justify-content: flex-end;
+        }
+        
+        .time-block {
+            text-align: right;
+        }
+        
+        .time-label { color: #666; font-size: 0.7rem; }
+        .time-value { color: #0ff; font-size: 1.1rem; font-weight: bold; }
+        .time-value.elapsed { color: #f0f; }
+        
+        .progress-bar-container {
+            position: relative;
+            margin-bottom: 15px;
+        }
+        
+        .progress-bar {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            height: 20px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #f0f, #0ff);
+            transition: width 0.3s ease;
+            box-shadow: 0 0 15px rgba(0,255,255,0.5);
+            position: relative;
+        }
+        
+        /* Animated stripes for "working" indication */
+        .progress-fill.working::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 10px,
+                rgba(255,255,255,0.1) 10px,
+                rgba(255,255,255,0.1) 20px
+            );
+            animation: moveStripes 1s linear infinite;
+        }
+        
+        @keyframes moveStripes {
+            0% { background-position: 0 0; }
+            100% { background-position: 40px 0; }
+        }
+        
+        .progress-markers {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px;
+            font-size: 0.7rem;
+            color: #666;
+        }
+        
+        .progress-marker {
+            position: relative;
+            text-align: center;
+        }
+        
+        .progress-marker.active { color: #0ff; }
+        .progress-marker.done { color: #0f0; }
+        
+        .progress-details {
+            display: flex;
+            justify-content: center;
+            gap: 25px;
+            flex-wrap: wrap;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .detail-item {
+            text-align: center;
+        }
+        
+        .detail-label { color: #666; font-size: 0.7rem; }
+        .detail-value { color: #fff; font-size: 0.9rem; }
+        .detail-value span { color: #0ff; }
+        
+        /* Working indicator */
+        .working-indicator {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+            padding: 12px;
+            background: rgba(0,255,255,0.1);
+            border: 1px solid rgba(0,255,255,0.3);
+            border-radius: 8px;
+        }
+        
+        .working-indicator.active { display: flex; }
+        
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0,255,255,0.3);
+            border-top-color: #0ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .working-text {
+            color: #0ff;
+            font-size: 0.9rem;
+        }
+        
+        /* ============================================
+           DASHBOARD
+           ============================================ */
+        .dashboard-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .dash-stat {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,0,255,0.2);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .dash-stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            font-family: 'Orbitron', sans-serif;
+        }
+        
+        .dash-stat-value.complete { color: #0f0; }
+        .dash-stat-value.processing { color: #0ff; }
+        .dash-stat-value.failed { color: #f00; }
+        .dash-stat-value.queued { color: #ff0; }
+        
+        .dash-stat-label { color: #888; font-size: 0.8rem; margin-top: 5px; }
+        
+        /* Job List */
+        .job-list { display: grid; gap: 15px; }
+        
+        .job-card {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 15px;
+            display: grid;
+            grid-template-columns: 80px 1fr auto;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .job-card.complete { border-color: rgba(0,255,0,0.3); }
+        .job-card.failed { border-color: rgba(255,0,0,0.3); }
+        .job-card.processing { border-color: rgba(0,255,255,0.3); }
+        .job-card.queued { border-color: rgba(255,255,0,0.3); }
+        
+        .job-thumb {
+            width: 80px;
+            height: 80px;
+            border-radius: 8px;
+            object-fit: cover;
+            background: rgba(255,255,255,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: #888;
+        }
+        
+        .job-thumb img {
+            width: 100%;
+            height: 100%;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+        
+        .job-info { flex: 1; }
+        
+        .job-name {
+            font-weight: bold;
+            color: #fff;
+            margin-bottom: 5px;
+            word-break: break-all;
+        }
+        
+        .job-meta {
+            display: flex;
+            gap: 15px;
+            font-size: 0.8rem;
+            color: #888;
+            flex-wrap: wrap;
+        }
+        
+        .job-meta span { color: #0ff; }
+        
+        .job-status {
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .job-status.complete { background: rgba(0,255,0,0.2); color: #0f0; }
+        .job-status.failed { background: rgba(255,0,0,0.2); color: #f00; }
+        .job-status.processing { background: rgba(0,255,255,0.2); color: #0ff; }
+        .job-status.queued { background: rgba(255,255,0,0.2); color: #ff0; }
+        
+        .job-progress-info {
+            font-size: 0.8rem;
+            color: #0ff;
+            margin-top: 5px;
+        }
+        
+        .job-error {
+            color: #f88;
+            font-size: 0.8rem;
+            margin-top: 5px;
+            padding: 8px;
+            background: rgba(255,0,0,0.1);
+            border-radius: 5px;
+        }
+        
+        .job-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .job-btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.8rem;
+            font-weight: bold;
+            transition: all 0.2s ease;
+        }
+        
+        .job-btn.download { background: #0f0; color: #000; }
+        .job-btn.download:hover { box-shadow: 0 0 15px rgba(0,255,0,0.5); }
+        
+        .job-btn.retry { background: #ff0; color: #000; }
+        .job-btn.retry:hover { box-shadow: 0 0 15px rgba(255,255,0,0.5); }
+        
+        .job-btn.delete { background: rgba(255,0,0,0.3); color: #f88; }
+        .job-btn.delete:hover { background: rgba(255,0,0,0.5); }
+        
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+        
+        .empty-state .icon { font-size: 4rem; margin-bottom: 20px; }
+        
+        /* Mini progress for dashboard cards */
+        .mini-progress-container {
+            margin-top: 8px;
+        }
+        
+        .mini-progress {
+            width: 100%;
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .mini-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #f0f, #0ff);
+            transition: width 0.3s ease;
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); }
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #f0f, #0ff);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="grid-bg"></div>
+    <div class="glow-orb pink"></div>
+    <div class="glow-orb cyan"></div>
+    
+    <div class="container">
+        <header>
+            <h1>MEGA UPSCALER</h1>
+            <p class="subtitle">AI-POWERED IMAGE SCALING FOR LARGE FORMAT PRINTING</p>
+        </header>
+        
+        <div class="specs-bar">
+            <div class="spec-chip">
+                <span class="label">TARGET:</span>
+                <span class="value" id="spec-dims">39ft × 12ft</span>
+            </div>
+            <div class="spec-chip">
+                <span class="label">RESOLUTION:</span>
+                <span class="value" id="spec-ppi">300 PPI</span>
+            </div>
+            <div class="spec-chip">
+                <span class="label">OUTPUT:</span>
+                <span class="value">6.06 GIGAPIXELS</span>
+            </div>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="upload">📤 UPLOAD</button>
+            <button class="tab-btn" data-tab="dashboard">📊 DASHBOARD <span id="active-count"></span></button>
+        </div>
+        
+        <!-- Upload Tab -->
+        <div class="tab-content active" id="tab-upload">
+            <div class="upload-zone" id="upload-zone">
+                <input type="file" id="file-input" accept="image/*">
+                <div class="upload-icon">📤</div>
+                <p class="upload-text">DROP YOUR IMAGE HERE</p>
+                <p class="upload-hint">or click to browse • PNG, JPG, TIFF, WebP</p>
+            </div>
+            
+            <div class="panel" id="analysis-panel">
+                <div class="panel-grid">
+                    <div>
+                        <img src="" alt="Preview" class="preview-img" id="preview-img">
+                        <p class="preview-name" id="preview-name"></p>
+                    </div>
+                    <div>
+                        <h3 class="analysis-title">📊 ANALYSIS</h3>
+                        <div class="stats-grid">
+                            <div class="stat-box pink">
+                                <div class="stat-label">CURRENT</div>
+                                <div class="stat-value" id="stat-current">-</div>
+                            </div>
+                            <div class="stat-box cyan">
+                                <div class="stat-label">TARGET</div>
+                                <div class="stat-value" id="stat-target">-</div>
+                            </div>
+                            <div class="stat-box dark">
+                                <div class="stat-label">SCALE</div>
+                                <div class="stat-value" id="stat-scale">-</div>
+                            </div>
+                            <div class="stat-box dark">
+                                <div class="stat-label">AI PASSES</div>
+                                <div class="stat-value" id="stat-passes">-</div>
+                            </div>
+                            <div class="stat-box dark">
+                                <div class="stat-label">EST. OUTPUT</div>
+                                <div class="stat-value" id="stat-output">-</div>
+                            </div>
+                        </div>
+                        
+                        <div class="config-section">
+                            <div class="config-row">
+                                <div class="config-field">
+                                    <label>WIDTH (feet)</label>
+                                    <input type="number" id="config-width" value="39" step="0.5" min="1">
+                                </div>
+                                <div class="config-field">
+                                    <label>HEIGHT (feet)</label>
+                                    <input type="number" id="config-height" value="12" step="0.5" min="1">
+                                </div>
+                                <div class="config-field">
+                                    <label>PPI</label>
+                                    <input type="number" id="config-ppi" value="300" step="50" min="72">
+                                </div>
+                            </div>
+                            
+                            <button class="btn btn-primary" id="upscale-btn">🚀 UPSCALE IMAGE</button>
+                        </div>
+                        
+                        <!-- Enhanced Progress Panel -->
+                        <div class="progress-panel" id="progress-panel">
+                            <div class="progress-header">
+                                <div class="progress-left">
+                                    <div class="progress-percent" id="progress-percent">0%</div>
+                                    <div class="progress-stage-info">
+                                        <div class="progress-stage" id="progress-stage">Starting...</div>
+                                        <div class="progress-detail" id="progress-detail">Initializing...</div>
+                                    </div>
+                                </div>
+                                <div class="progress-right">
+                                    <div class="progress-time-row">
+                                        <div class="time-block">
+                                            <div class="time-label">ELAPSED</div>
+                                            <div class="time-value elapsed" id="time-elapsed">0:00</div>
+                                        </div>
+                                        <div class="time-block">
+                                            <div class="time-label">ETA</div>
+                                            <div class="time-value" id="time-eta">Calculating...</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="progress-bar-container">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+                                </div>
+                                <div class="progress-markers">
+                                    <div class="progress-marker" data-phase="init">Init</div>
+                                    <div class="progress-marker" data-phase="tiles">AI Upscale</div>
+                                    <div class="progress-marker" data-phase="resize">Resize</div>
+                                    <div class="progress-marker" data-phase="save">Save</div>
+                                    <div class="progress-marker" data-phase="done">Done</div>
+                                </div>
+                            </div>
+                            
+                            <div class="progress-details" id="progress-details">
+                                <div class="detail-item">
+                                    <div class="detail-label">PASS</div>
+                                    <div class="detail-value"><span id="detail-pass">-</span></div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">TILES</div>
+                                    <div class="detail-value"><span id="detail-tiles">-</span></div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">INPUT</div>
+                                    <div class="detail-value"><span id="detail-input">-</span></div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">TARGET</div>
+                                    <div class="detail-value"><span id="detail-target">-</span></div>
+                                </div>
+                            </div>
+                            
+                            <div class="working-indicator" id="working-indicator">
+                                <div class="spinner"></div>
+                                <div class="working-text" id="working-text">Processing... please wait</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Dashboard Tab -->
+        <div class="tab-content" id="tab-dashboard">
+            <div class="dashboard-stats">
+                <div class="dash-stat">
+                    <div class="dash-stat-value complete" id="stat-complete">0</div>
+                    <div class="dash-stat-label">COMPLETE</div>
+                </div>
+                <div class="dash-stat">
+                    <div class="dash-stat-value processing" id="stat-processing">0</div>
+                    <div class="dash-stat-label">PROCESSING</div>
+                </div>
+                <div class="dash-stat">
+                    <div class="dash-stat-value failed" id="stat-failed">0</div>
+                    <div class="dash-stat-label">FAILED</div>
+                </div>
+                <div class="dash-stat">
+                    <div class="dash-stat-value queued" id="stat-queued">0</div>
+                    <div class="dash-stat-label">QUEUED</div>
+                </div>
+            </div>
+            
+            <div class="job-list" id="job-list">
+                <div class="empty-state">
+                    <div class="icon">🖼️</div>
+                    <p>No jobs yet. Upload an image to get started!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const API_BASE = '';
+        let currentFile = null;
+        let currentJobId = null;
+        let pollInterval = null;
+        let dashboardInterval = null;
+        
+        // Format helpers
+        const formatNumber = (n) => n.toLocaleString();
+        const formatBytes = (bytes) => {
+            if (bytes >= 1e9) return (bytes / 1e9).toFixed(2) + ' GB';
+            if (bytes >= 1e6) return (bytes / 1e6).toFixed(2) + ' MB';
+            return (bytes / 1e3).toFixed(2) + ' KB';
+        };
+        const formatDuration = (seconds) => {
+            if (!seconds || seconds <= 0) return 'Calculating...';
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = Math.floor(seconds % 60);
+            if (h > 0) return `${h}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+            return `${m}:${s.toString().padStart(2,'0')}`;
+        };
+        const formatElapsed = (seconds) => {
+            if (!seconds) return '0:00';
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = Math.floor(seconds % 60);
+            if (h > 0) return `${h}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+            return `${m}:${s.toString().padStart(2,'0')}`;
+        };
+        
+        // Tab switching
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+                if (btn.dataset.tab === 'dashboard') loadDashboard();
+            });
+        });
+        
+        // Upload handlers
+        const uploadZone = document.getElementById('upload-zone');
+        const fileInput = document.getElementById('file-input');
+        
+        uploadZone.addEventListener('click', () => fileInput.click());
+        uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+        uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+        uploadZone.addEventListener('drop', (e) => { e.preventDefault(); uploadZone.classList.remove('dragover'); handleFile(e.dataTransfer.files[0]); });
+        fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+        
+        async function handleFile(file) {
+            if (!file || !file.type.startsWith('image/')) return;
+            
+            currentFile = file;
+            document.getElementById('preview-name').textContent = file.name;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => { document.getElementById('preview-img').src = e.target.result; };
+            reader.readAsDataURL(file);
+            
+            await analyzeImage(file);
+            document.getElementById('analysis-panel').classList.add('active');
+            document.getElementById('progress-panel').classList.remove('active');
+            document.getElementById('upscale-btn').disabled = false;
+        }
+        
+        async function analyzeImage(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('width_ft', document.getElementById('config-width').value);
+            formData.append('height_ft', document.getElementById('config-height').value);
+            formData.append('ppi', document.getElementById('config-ppi').value);
+            
+            try {
+                const resp = await fetch(`${API_BASE}/api/analyze`, { method: 'POST', body: formData });
+                const data = await resp.json();
+                
+                document.getElementById('stat-current').textContent = `${formatNumber(data.input.width)}×${formatNumber(data.input.height)}`;
+                document.getElementById('stat-target').textContent = `${formatNumber(data.target.width_px)}×${formatNumber(data.target.height_px)}`;
+                document.getElementById('stat-scale').textContent = `${data.processing.scale_factor}×`;
+                document.getElementById('stat-passes').textContent = data.processing.num_passes;
+                document.getElementById('stat-output').textContent = `~${data.processing.estimated_size_gb} GB`;
+                
+                document.getElementById('spec-dims').textContent = `${data.target.width_ft}ft × ${data.target.height_ft}ft`;
+                document.getElementById('spec-ppi').textContent = `${data.target.ppi} PPI`;
+            } catch (err) {
+                console.error('Analysis failed:', err);
+            }
+        }
+        
+        ['config-width', 'config-height', 'config-ppi'].forEach(id => {
+            document.getElementById(id).addEventListener('change', () => {
+                if (currentFile) analyzeImage(currentFile);
+            });
+        });
+        
+        // Upscale button
+        document.getElementById('upscale-btn').addEventListener('click', async () => {
+            if (!currentFile) return;
+            
+            document.getElementById('upscale-btn').disabled = true;
+            document.getElementById('progress-panel').classList.add('active');
+            resetProgress();
+            
+            const formData = new FormData();
+            formData.append('file', currentFile);
+            formData.append('width_ft', document.getElementById('config-width').value);
+            formData.append('height_ft', document.getElementById('config-height').value);
+            formData.append('ppi', document.getElementById('config-ppi').value);
+            
+            try {
+                const resp = await fetch(`${API_BASE}/api/upscale`, { method: 'POST', body: formData });
+                const data = await resp.json();
+                currentJobId = data.job_id;
+                pollJobStatus();
+            } catch (err) {
+                console.error('Upscale failed:', err);
+                alert('Failed to start upscaling');
+                document.getElementById('upscale-btn').disabled = false;
+                document.getElementById('progress-panel').classList.remove('active');
+            }
+        });
+        
+        function resetProgress() {
+            document.getElementById('progress-percent').textContent = '0%';
+            document.getElementById('progress-fill').style.width = '0%';
+            document.getElementById('progress-fill').classList.add('working');
+            document.getElementById('progress-stage').textContent = 'Starting...';
+            document.getElementById('progress-detail').textContent = 'Uploading image...';
+            document.getElementById('time-elapsed').textContent = '0:00';
+            document.getElementById('time-eta').textContent = 'Calculating...';
+            document.getElementById('detail-pass').textContent = '-';
+            document.getElementById('detail-tiles').textContent = '-';
+            document.getElementById('detail-input').textContent = '-';
+            document.getElementById('detail-target').textContent = '-';
+            document.getElementById('working-indicator').classList.remove('active');
+            
+            // Reset markers
+            document.querySelectorAll('.progress-marker').forEach(m => {
+                m.classList.remove('active', 'done');
+            });
+        }
+        
+        function updateProgressMarkers(progress) {
+            const markers = document.querySelectorAll('.progress-marker');
+            markers.forEach(m => m.classList.remove('active', 'done'));
+            
+            if (progress >= 100) {
+                markers.forEach(m => m.classList.add('done'));
+            } else if (progress >= 97) {
+                markers[0].classList.add('done');
+                markers[1].classList.add('done');
+                markers[2].classList.add('done');
+                markers[3].classList.add('active');
+            } else if (progress >= 85) {
+                markers[0].classList.add('done');
+                markers[1].classList.add('done');
+                markers[2].classList.add('active');
+            } else if (progress >= 5) {
+                markers[0].classList.add('done');
+                markers[1].classList.add('active');
+            } else {
+                markers[0].classList.add('active');
+            }
+        }
+        
+        function updateProgress(job) {
+            const pct = Math.round(job.progress);
+            document.getElementById('progress-percent').textContent = `${pct}%`;
+            document.getElementById('progress-fill').style.width = `${job.progress}%`;
+            document.getElementById('progress-stage').textContent = job.stage || 'Processing';
+            document.getElementById('progress-detail').textContent = job.stage_detail || '';
+            document.getElementById('time-elapsed').textContent = formatElapsed(job.elapsed_seconds);
+            document.getElementById('time-eta').textContent = job.eta_seconds > 0 ? formatDuration(job.eta_seconds) : 'Calculating...';
+            
+            // Update details
+            if (job.num_passes > 0) {
+                document.getElementById('detail-pass').textContent = `${job.current_pass || '-'}/${job.num_passes}`;
+            }
+            if (job.tiles_total > 0) {
+                document.getElementById('detail-tiles').textContent = `${job.tiles_done}/${job.tiles_total}`;
+            }
+            if (job.input_width) {
+                document.getElementById('detail-input').textContent = `${formatNumber(job.input_width)}×${formatNumber(job.input_height)}`;
+            }
+            if (job.target_width) {
+                document.getElementById('detail-target').textContent = `${formatNumber(job.target_width)}×${formatNumber(job.target_height)}`;
+            }
+            
+            updateProgressMarkers(job.progress);
+            
+            // Show working indicator for final stages (after tiles)
+            const workingIndicator = document.getElementById('working-indicator');
+            const workingText = document.getElementById('working-text');
+            const progressFill = document.getElementById('progress-fill');
+            
+            if (job.progress >= 85 && job.progress < 100) {
+                workingIndicator.classList.add('active');
+                progressFill.classList.add('working');
+                
+                if (job.stage.includes('Resize')) {
+                    workingText.textContent = '🔄 Resizing to final dimensions... This may take a while for large images';
+                } else if (job.stage.includes('Saving') || job.stage.includes('TIFF')) {
+                    workingText.textContent = '💾 Compressing and saving TIFF... Large files take time';
+                } else if (job.stage.includes('Thumbnail')) {
+                    workingText.textContent = '🖼️ Generating thumbnail preview...';
+                } else {
+                    workingText.textContent = '⏳ Finalizing... please wait';
+                }
+            } else if (job.progress >= 100 || job.status === 'complete') {
+                workingIndicator.classList.remove('active');
+                progressFill.classList.remove('working');
+            } else {
+                workingIndicator.classList.remove('active');
+                progressFill.classList.add('working');
+            }
+        }
+        
+        function pollJobStatus() {
+            if (pollInterval) clearInterval(pollInterval);
+            
+            pollInterval = setInterval(async () => {
+                try {
+                    const resp = await fetch(`${API_BASE}/api/status/${currentJobId}`);
+                    const job = await resp.json();
+                    
+                    updateProgress(job);
+                    
+                    if (job.status === 'complete') {
+                        clearInterval(pollInterval);
+                        document.getElementById('progress-stage').textContent = '✅ Complete!';
+                        document.getElementById('progress-detail').textContent = `Output: ${formatBytes(job.output_size)} - Check dashboard to download`;
+                        document.getElementById('time-eta').textContent = 'Done!';
+                        document.getElementById('progress-fill').classList.remove('working');
+                        document.getElementById('working-indicator').classList.remove('active');
+                        document.getElementById('upscale-btn').disabled = false;
+                        updateActiveCount();
+                    } else if (job.status === 'failed') {
+                        clearInterval(pollInterval);
+                        document.getElementById('progress-stage').textContent = '❌ Failed';
+                        document.getElementById('progress-detail').textContent = job.error || 'Unknown error';
+                        document.getElementById('time-eta').textContent = '-';
+                        document.getElementById('progress-fill').classList.remove('working');
+                        document.getElementById('working-indicator').classList.remove('active');
+                        document.getElementById('upscale-btn').disabled = false;
+                        updateActiveCount();
+                    }
+                } catch (err) {
+                    console.error('Poll failed:', err);
+                }
+            }, 1000);
+        }
+        
+        // Dashboard
+        async function loadDashboard() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/jobs`);
+                const jobs = await resp.json();
+                
+                const counts = { complete: 0, processing: 0, failed: 0, queued: 0 };
+                jobs.forEach(j => counts[j.status] = (counts[j.status] || 0) + 1);
+                
+                document.getElementById('stat-complete').textContent = counts.complete;
+                document.getElementById('stat-processing').textContent = counts.processing;
+                document.getElementById('stat-failed').textContent = counts.failed;
+                document.getElementById('stat-queued').textContent = counts.queued;
+                
+                updateActiveCount(counts.processing + counts.queued);
+                
+                if (jobs.length === 0) {
+                    document.getElementById('job-list').innerHTML = `
+                        <div class="empty-state">
+                            <div class="icon">🖼️</div>
+                            <p>No jobs yet. Upload an image to get started!</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                document.getElementById('job-list').innerHTML = jobs.map(job => {
+                    const thumbUrl = job.thumbnail_path ? `${API_BASE}/api/thumbnail/${job.id}` : '';
+                    const thumbHtml = thumbUrl 
+                        ? `<img src="${thumbUrl}" alt="Thumbnail">`
+                        : getStatusIcon(job.status);
+                    
+                    let actionsHtml = '';
+                    let progressHtml = '';
+                    
+                    if (job.status === 'complete') {
+                        actionsHtml = `
+                            <button class="job-btn download" onclick="downloadJob('${job.id}')">⬇️ Download</button>
+                            <button class="job-btn delete" onclick="deleteJob('${job.id}')">🗑️</button>
+                        `;
+                    } else if (job.status === 'failed') {
+                        actionsHtml = `
+                            <button class="job-btn retry" onclick="retryJob('${job.id}')">🔄 Retry</button>
+                            <button class="job-btn delete" onclick="deleteJob('${job.id}')">🗑️</button>
+                        `;
+                    } else if (job.status === 'processing' || job.status === 'queued') {
+                        progressHtml = `
+                            <div class="job-progress-info">${Math.round(job.progress)}% - ${job.stage}</div>
+                            <div class="mini-progress-container">
+                                <div class="mini-progress">
+                                    <div class="mini-progress-fill" style="width:${job.progress}%"></div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    const errorHtml = job.status === 'failed' && job.error
+                        ? `<div class="job-error">Error: ${job.error}</div>`
+                        : '';
+                    
+                    const sizeInfo = job.output_size ? formatBytes(job.output_size) : '';
+                    const dimsInfo = job.input_width ? `${job.input_width}×${job.input_height}` : '';
+                    
+                    return `
+                        <div class="job-card ${job.status}">
+                            <div class="job-thumb">${thumbHtml}</div>
+                            <div class="job-info">
+                                <div class="job-name">${job.filename}</div>
+                                <div class="job-meta">
+                                    ${dimsInfo ? `<div>Input: <span>${dimsInfo}</span></div>` : ''}
+                                    ${sizeInfo ? `<div>Output: <span>${sizeInfo}</span></div>` : ''}
+                                </div>
+                                <span class="job-status ${job.status}">${job.status}</span>
+                                ${progressHtml}
+                                ${errorHtml}
+                            </div>
+                            <div class="job-actions">${actionsHtml}</div>
+                        </div>
+                    `;
+                }).join('');
+                
+            } catch (err) {
+                console.error('Load dashboard failed:', err);
+            }
+        }
+        
+        function getStatusIcon(status) {
+            switch(status) {
+                case 'complete': return '✅';
+                case 'failed': return '❌';
+                case 'processing': return '⏳';
+                case 'queued': return '🕐';
+                default: return '❓';
+            }
+        }
+        
+        function updateActiveCount(count) {
+            const el = document.getElementById('active-count');
+            if (count === undefined) {
+                fetch(`${API_BASE}/api/jobs`).then(r => r.json()).then(jobs => {
+                    const active = jobs.filter(j => j.status === 'processing' || j.status === 'queued').length;
+                    el.textContent = active > 0 ? `(${active})` : '';
+                });
+            } else {
+                el.textContent = count > 0 ? `(${count})` : '';
+            }
+        }
+        
+        function downloadJob(jobId) {
+            window.location.href = `${API_BASE}/api/download/${jobId}`;
+        }
+        
+        async function deleteJob(jobId) {
+            if (!confirm('Delete this job and its files?')) return;
+            try {
+                await fetch(`${API_BASE}/api/job/${jobId}`, { method: 'DELETE' });
+                loadDashboard();
+            } catch (err) {
+                console.error('Delete failed:', err);
+            }
+        }
+        
+        async function retryJob(jobId) {
+            try {
+                await fetch(`${API_BASE}/api/retry/${jobId}`, { method: 'POST' });
+                loadDashboard();
+            } catch (err) {
+                console.error('Retry failed:', err);
+                alert('Failed to retry job');
+            }
+        }
+        
+        // Initial load
+        updateActiveCount();
+        
+        // Auto-refresh dashboard
+        dashboardInterval = setInterval(() => {
+            if (document.getElementById('tab-dashboard').classList.contains('active')) {
+                loadDashboard();
+            }
+        }, 3000);
+    </script>
+</body>
+</html>
