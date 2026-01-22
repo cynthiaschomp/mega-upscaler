@@ -16,6 +16,7 @@ Transform any image into massive, print-ready files up to **6+ gigapixels** usin
 - **Job Persistence** - Redis-backed job queue survives restarts
 - **TIFF Output** - Professional print-ready files with LZW compression
 - **No API Keys** - Fully self-hosted, no cloud dependencies
+- **One-Click Setup** - Web wizard with auto-install for Docker
 
 ---
 
@@ -31,11 +32,48 @@ Transform any image into massive, print-ready files up to **6+ gigapixels** usin
 
 ---
 
+## 🚀 Quick Install
+
+### Web Installer (Recommended - Zero Technical Knowledge Required)
+
+1. Download/upload the package to your web server
+2. Navigate to `http://your-server/mega-upscaler/install.php`
+3. Follow the 6-step wizard:
+
+| Step | Name | What Happens |
+|------|------|--------------|
+| 1 | Welcome | Introduction |
+| 2 | System Check | Auto-detects Docker, RAM, GPU. **Click "Auto-Install Docker" if missing!** |
+| 3 | Redis Setup | Choose bundled (recommended), external, or fresh install |
+| 4 | Configuration | Set port and install directory |
+| 5 | Install | One-click Docker build |
+| 6 | Complete | 🎉 Launch your app! |
+
+**Don't have Docker?** The wizard detects this and shows a green **"🔧 Auto-Install Docker"** button. One click installs Docker automatically!
+
+### Manual Install (for developers)
+
+```bash
+# Clone the repository
+git clone https://github.com/cynthiaschomp/mega-upscaler.git
+cd mega-upscaler
+
+# Build and run
+docker compose build
+docker compose up -d
+
+# Access at http://localhost:15073
+```
+
+---
+
 ## 🐳 Docker Installation
 
-### Don't have Docker? No problem!
+### Option 1: One-Click in Web Wizard (Easiest)
 
-Run the included auto-installer:
+The install wizard automatically detects if Docker is missing and offers a **one-click install button**. Just click it and wait!
+
+### Option 2: Command Line
 
 ```bash
 chmod +x install-docker.sh
@@ -50,7 +88,7 @@ sudo ./install-docker.sh
 | RHEL-based | CentOS, RHEL, Fedora, Rocky Linux, AlmaLinux |
 | macOS | Via Homebrew (Docker Desktop) |
 
-**What the script does:**
+**What the installer does:**
 1. Detects your operating system
 2. Adds Docker's official repository
 3. Installs Docker Engine and Docker Compose
@@ -58,36 +96,6 @@ sudo ./install-docker.sh
 5. Adds your user to the docker group
 
 > **Note:** After installation, log out and back in for group changes to take effect.
-
----
-
-## 🚀 Quick Install
-
-### Option 1: Web Installer (Recommended for beginners)
-
-1. Upload the package to your web server
-2. Navigate to `http://your-server/mega-upscaler/install.php`
-3. Follow the 6-step wizard:
-   - **Welcome** - Introduction
-   - **System Check** - Auto-detects Docker, RAM, GPU
-   - **Redis Setup** - Choose bundled, external, or fresh install
-   - **Configuration** - Set port and install directory
-   - **Install** - One-click Docker build
-   - **Complete** - Launch your app!
-
-### Option 2: Manual Install (for developers)
-
-```bash
-# Clone the repository
-git clone https://github.com/cynthiaschomp/mega-upscaler.git
-cd mega-upscaler
-
-# Build and run
-docker compose build
-docker compose up -d
-
-# Access at http://localhost:15073
-```
 
 ---
 

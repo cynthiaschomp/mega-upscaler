@@ -15,6 +15,17 @@
  */
 
 session_start();
+
+// Handle Docker auto-installation request
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install_docker'])) {
+    $result = installDocker();
+    $_SESSION['docker_install_result'] = $result;
+    // Clear cached checks so they re-run
+    unset($_SESSION['checks']);
+    header('Location: ?step=2&docker_attempted=1');
+    exit;
+}
+
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 
@@ -119,6 +130,32 @@ function checkRedisInstalled() {
     $r = execCmd('which redis-server');
     return $r['code'] === 0 && !empty(trim($r['output']));
 }
+function installDocker() {
+    $scriptPath = __DIR__ . '/install-docker.sh';
+    if (!file_exists($scriptPath)) {
+        return ['success' => false, 'log' => ['Error: install-docker.sh not found'], 'error' => 'Installation script missing'];
+    }
+    $log = [];
+    $log[] = '🐳 Starting Docker installation...';
+    $log[] = '📍 Detected OS: ' . getOS();
+    $log[] = '';
+    $cmd = 'sudo bash ' . escapeshellarg($scriptPath) . ' 2>&1';
+    $output = [];
+    $code = 0;
+    exec($cmd, $output, $code);
+    $log = array_merge($log, $output);
+    if ($code === 0) {
+        $log[] = '';
+        $log[] = '✅ Docker installation completed!';
+        return ['success' => true, 'log' => $log];
+    } else {
+        $log[] = '';
+        $log[] = '❌ Installation failed with exit code: ' . $code;
+        return ['success' => false, 'log' => $log, 'error' => 'Installation failed'];
+    }
+}
+
+
 
 function getOS() {
     if (stripos(PHP_OS, 'darwin') !== false) return 'macos';
@@ -1106,6 +1143,24 @@ if ($step === 2 && empty($_SESSION['checks'])) {
                       // STEP 2: SYSTEM CHECK
                       // ════════════════════════════════════════════════════════════
                 elseif ($step === 2): 
+                    // Show Docker installation result if attempted
+                    if (isset($_SESSION['docker_install_result'])):
+                        $dockerResult = $_SESSION['docker_install_result'];
+                        unset($_SESSION['docker_install_result']);
+                ?>
+                <div class="<?= $dockerResult['success'] ? 'success-box' : 'error-box' ?>" style="margin-bottom: 20px; padding: 15px; border-radius: 8px;">
+                    <h3 style="margin-bottom: 10px;"><?= $dockerResult['success'] ? '✅ Docker Installed!' : '❌ Installation Issue' ?></h3>
+                    <div class="log-box" style="max-height: 200px; overflow-y: auto; font-size: 0.85rem; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 4px;">
+                        <?php foreach ($dockerResult['log'] as $line): ?>
+                        <div style="font-family: monospace;"><?= htmlspecialchars($line) ?></div>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php if ($dockerResult['success']): ?>
+                    <p style="margin-top: 10px; color: #10b981;">You may need to <strong>log out and back in</strong> for Docker permissions to take effect, then refresh this page.</p>
+                    <?php endif; ?>
+                </div>
+                <?php endif; ?>
+                <?php
                     $checks = $_SESSION['checks'] ?? runSystemChecks();
                     $_SESSION['checks'] = $checks;
                     $canProceed = true;
@@ -1131,6 +1186,13 @@ if ($step === 2 && empty($_SESSION['checks'])) {
                             </div>
                             <?php if (!$c['pass'] && !empty($c['help'])): ?>
                             <div class="check-help">💡 <?= $c['help'] ?></div>
+                            <?php endif; ?>
+                            <?php if ($key === 'docker' && !$c['pass']): ?>
+                            <form method="post" style="margin-top: 10px;">
+                                <button type="submit" name="install_docker" value="1" class="btn btn-sm" style="background: linear-gradient(135deg, #10b981, #059669); padding: 8px 16px; font-size: 0.85rem;">
+                                    🔧 Auto-Install Docker
+                                </button>
+                            </form>
                             <?php endif; ?>
                         </div>
                     </div>
